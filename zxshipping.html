@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZX-Shipping Shipment Tracker</title>
+  <!-- Leaflet CSS and JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    /* Reset and Global Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Arial', sans-serif;
+    }
+    body {
+      background-color: #f9fafb;
+      color: #1f2937;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: 'Arial', sans-serif;
+    }
+    .container {
+      width: 100%;
+      max-width: 600px;
+      padding: 10px;
+    }
+    .header {
+      width: 100%;
+      text-align: center;
+      padding: 15px 0;
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #111827;
+    }
+    .main-search {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+    .tracking-input {
+      flex-grow: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px 0 0 5px;
+      font-size: 1em;
+      outline: none;
+    }
+    .track-btn {
+      border: none;
+      background-color: #2563eb;
+      color: #fff;
+      cursor: pointer;
+      padding: 10px 15px;
+      font-size: 1em;
+      border-radius: 0 5px 5px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s ease;
+    }
+    .track-btn:hover {
+      background-color: #1d4ed8;
+    }
+    .status-card, .tracking-timeline, .map-section, .summary-card, .help-section, .past-shipments {
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      margin: 10px 0;
+    }
+    .status-card h3, .timeline h3, .past-shipments h3 {
+      font-size: 1em;
+      font-weight: bold;
+      color: #111827;
+      margin-bottom: 10px;
+    }
+    /* Timeline Styles */
+    .timeline {
+      display: flex;
+      flex-direction: column;
+    }
+    .timeline .event {
+      display: flex;
+      align-items: flex-start;
+      padding: 10px 0;
+      border-left: 2px solid #2563eb;
+      position: relative;
+    }
+    .timeline .event::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #2563eb;
+      position: absolute;
+      left: -6px;
+      top: 12px;
+    }
+    .event-details {
+      margin-left: 10px;
+      font-size: 0.9em;
+      color: #374151;
+    }
+    .event-date {
+      font-size: 0.8em;
+      color: #6b7280;
+      margin-top: 3px;
+    }
+    /* Shipment Summary */
+    .summary-card p {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9em;
+      color: #374151;
+    }
+    /* Past Shipments Section */
+    .past-shipments-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-top: 1px solid #e5e7eb;
+    }
+    .past-shipments-item:first-child {
+      border-top: none;
+    }
+    .past-shipments img {
+      width: 50px;
+      height: 50px;
+      border-radius: 8px;
+    }
+    .past-shipments .details {
+      flex: 1;
+      margin-left: 10px;
+      font-size: 0.9em;
+    }
+    .track-button {
+      padding: 5px 12px;
+      font-size: 0.85em;
+      color: #2563eb;
+      background-color: #f0f4f8;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+    }
+    /* Help Button */
+    .help-section button {
+      width: 100%;
+      padding: 12px;
+      background-color: #f3f4f6;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      color: #1f2937;
+      cursor: pointer;
+      text-align: center;
+    }
+    #map {
+      height: 200px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    ZX-Shipping Tracking
+  </header>
+
+  <!-- Main Search Section -->
+  <section class="main-search container">
+    <input type="text" placeholder="Enter Tracking ID" class="tracking-input" id="trackingId">
+    <button class="track-btn" onclick="trackShipment()">
+      🔍
+    </button>
+  </section>
+
+  <!-- Map Section -->
+  <section class="map-section container">
+    <div id="map"></div>
+  </section>
+
+  <!-- Tracking Timeline -->
+  <section class="tracking-timeline container">
+    <div class="timeline">
+      <h3>Order Status</h3>
+      <div id="timeline"></div>
+    </div>
+  </section>
+
+  <!-- Shipment Summary -->
+  <section class="summary-card container">
+    <p>Estimated Delivery <span id="deliveryDate">July 24</span></p>
+  </section>
+
+  <!-- Past Shipments Section -->
+  <section class="past-shipments container">
+    <h3>Past Shipments</h3>
+    <div class="past-shipments-item">
+      <img src="https://img.icons8.com/?size=50&id=12428&format=png&color=000000" alt="Shipment Package Icon" />
+
+      <div class="details">
+        <p>Arrived</p>
+        <span class="event-date">Jun 12, 2023</span>
+      </div>
+      <button class="track-button">Track</button>
+    </div>
+    <div class="past-shipments-item">
+      <img src="https://img.icons8.com/?size=50&id=12428&format=png&color=5C7CFA" alt="Shipment Package Icon" />
+
+      <div class="details">
+        <p>Delivered</p>
+        <span class="event-date">Mar 8, 2023</span>
+      </div>
+      <button class="track-button">Track</button>
+    </div>
+  </section>
+
+  <!-- Help Section -->
+  <section class="help-section container">
+    <button onclick="openSupport()">Need help?</button>
+  </section>
+
+  <!-- JavaScript Code -->
+  <script>
+    // Initialize the map using Leaflet
+    const map = L.map('map').setView([18.533689,-72.291101], 15); // Initial coordinates set to San Francisco
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 22,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Add a marker to simulate a shipment location
+    const marker = L.marker([18.533689,-72.291101]).addTo(map)
+      .bindPopup('Shipment Location: Delmas 77')
+      .openPopup();
+
+    function trackShipment() {
+      const timelineElement = document.getElementById('timeline');
+      timelineElement.innerHTML = ''; // Clear previous entries
+
+      // Mock tracking data
+      const trackingData = [
+        { date: 'Jul 15', status: 'At Warehouse Naples, FL' },
+        { date: 'Jul 16', status: 'Preparing to ship' },
+        { date: 'Jul 18', status: 'Shipped' },
+        { date: 'Jul 18', status: 'Arrived At Airport Toussaint Louverture P-A-P, HT' },
+        { date: 'Jul 23', status: 'Ready for pick-up at ZX-Shipping' },
+        { date: 'Today', status: 'Delivered' }
+      ];
+
+      // Populate timeline with mock data
+      trackingData.forEach(event => {
+        const eventElement = document.createElement('div');
+        eventElement.className = 'event';
+        eventElement.innerHTML = `
+          <div class="event-details">
+            <p>${event.status}</p>
+            <span class="event-date">${event.date}</span>
+          </div>
+        `;
+        timelineElement.appendChild(eventElement);
+      });
+
+      document.getElementById('deliveryDate').textContent = 'July 24';
+    }
+
+    // Help button function
+    function openSupport() {
+      alert("Connecting you to support...");
+    }
+  </script>
+</body>
+</html>
